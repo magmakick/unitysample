@@ -9,7 +9,7 @@ public class sample : MonoBehaviour {
 	public string hostname = "api.magmakick.io";
 	public string appFingerPrint;
 
-	public Text uuidTex;
+	public Text uuidText;
 	public GameObject inputArea;
 	public Text inputText;
 
@@ -18,16 +18,16 @@ public class sample : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		//UUID 출력.
-		uuidTex.text = SystemInfo.deviceUniqueIdentifier;
+		uuidText.text = SystemInfo.deviceUniqueIdentifier;
 
 		//기기등록 체크.
-		StartCoroutine(GetToken(appFingerPrint, uuidTex.text, GetUserInfo));
+		StartCoroutine(GetToken(appFingerPrint, uuidText.text, GetUserInfo));
 	}
 
 	//입력 enter 버튼과 연결되는 메서드.
 	public void AddUserID()
 	{
-		StartCoroutine(PostAddUserID(appFingerPrint, uuidTex.text, inputText.text, "ko-kr", GetUserInfo));
+		StartCoroutine(PostAddUserID(appFingerPrint, uuidText.text, inputText.text, "ko-kr", GetUserInfo));
 	}
 
 	private void GetUserInfo()
@@ -35,23 +35,38 @@ public class sample : MonoBehaviour {
 		StartCoroutine(GetUserInfo(token));
 	}
 
-	void CheckError(string JSONstr) 
+	int CheckError(string JSONstr, out Hashtable decodeJSON) 
 	{
 		Debug.Log(JSONstr);
-		Hashtable decodeJSON = (Hashtable)MiniJSON.jsonDecode(JSONstr);
+		decodeJSON = (Hashtable)MiniJSON.jsonDecode(JSONstr);
 		int code = System.Convert.ToInt32(decodeJSON["result"]);
 		switch(code) 
 		{
 			case 80101:
 				Debug.Log("기기가 미등록된 상태입니다.");
-				StartCoroutine(PostAddDevice(appFingerPrint, uuidTex.text, 0));
 				break;
 			case 80202:
 				Debug.Log("ID를 입력 후 사용자 등록이 필요합니다.");
-				inputArea.SetActive(true);
 				break;
 			case 80204:
 				Debug.Log("3~12글자 아이디를 입력하세요.");
+				break;
+			case 90101:
+				Debug.Log("MagmaKick에 등록된 app이 아닙니다. appFingerPrint를 확인하세요.");
+				break;
+		}
+		return code;
+	}
+
+	void DoErrorAction(int code) 
+	{
+		switch(code) 
+		{
+			case 80101:
+				StartCoroutine(PostAddDevice(appFingerPrint, uuidText.text, 0));
+				break;
+			case 80202:
+				inputArea.SetActive(true);
 				break;
 		}
 	}
@@ -70,10 +85,10 @@ public class sample : MonoBehaviour {
 		}
 		else 
 		{
-			Hashtable decodeJSON = (Hashtable)MiniJSON.jsonDecode(www.text);
-			int code = System.Convert.ToInt32(decodeJSON["result"]);
-			if(code != 0)
-				CheckError(www.text);
+			Hashtable decodeJSON;
+			int errCode = CheckError(www.text, out decodeJSON);
+			if(errCode != 0)
+				DoErrorAction(errCode);
 			else 
 			{
 				token = (string)decodeJSON["token"];
@@ -100,10 +115,14 @@ public class sample : MonoBehaviour {
 		}
 		else 
 		{
-			Hashtable decodeJSON = (Hashtable)MiniJSON.jsonDecode(www.text);
-			int code = System.Convert.ToInt32(decodeJSON["result"]);
-			if(code != 0)
-				CheckError(www.text); 
+			Hashtable decodeJSON;
+			int errCode = CheckError(www.text, out decodeJSON);
+			if(errCode != 0)
+				DoErrorAction(errCode);
+			else
+			{
+				inputArea.SetActive(true);
+			}
 		}
 	}
 
@@ -126,10 +145,10 @@ public class sample : MonoBehaviour {
 		}
 		else 
 		{
-			Hashtable decodeJSON = (Hashtable)MiniJSON.jsonDecode(www.text);
-			int code = System.Convert.ToInt32(decodeJSON["result"]);
-			if(code != 0)
-				CheckError(www.text);
+			Hashtable decodeJSON;
+			int errCode = CheckError(www.text, out decodeJSON);
+			if(errCode != 0)
+				DoErrorAction(errCode);
 			else 
 			{
 				token = (string)decodeJSON["token"];
@@ -156,14 +175,13 @@ public class sample : MonoBehaviour {
 		}
 		else 
 		{
-			Hashtable decodeJSON = (Hashtable)MiniJSON.jsonDecode(www.text);
-			int code = System.Convert.ToInt32(decodeJSON["result"]);
-			if(code != 0)
-				CheckError(www.text);
+			Hashtable decodeJSON;
+			int errCode = CheckError(www.text, out decodeJSON);
+			if(errCode != 0)
+				DoErrorAction(errCode);
 			else
 			{
 				inputArea.SetActive(false);
-				Debug.Log(www.text);
 			}
 				
 		}
